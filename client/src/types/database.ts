@@ -18,6 +18,15 @@ export interface Database {
           name:       string
           email:      string
           currency:   string
+          theme:      string
+          notify_budget_alerts:      boolean
+          notify_goal_milestones:    boolean
+          notify_large_transactions: boolean
+          large_transaction_threshold: number
+          notify_weekly_summary:     boolean
+          notify_monthly_report:     boolean
+          two_factor_enabled:        boolean
+          session_timeout_minutes:   number
           created_at: string
         }
         Insert: {
@@ -25,12 +34,30 @@ export interface Database {
           name?:       string
           email?:      string
           currency?:   string
+          theme?:      string
+          notify_budget_alerts?:      boolean
+          notify_goal_milestones?:    boolean
+          notify_large_transactions?: boolean
+          large_transaction_threshold?: number
+          notify_weekly_summary?:     boolean
+          notify_monthly_report?:     boolean
+          two_factor_enabled?:        boolean
+          session_timeout_minutes?:   number
           created_at?: string
         }
         Update: {
           name?:     string
           email?:    string
           currency?: string
+          theme?:      string
+          notify_budget_alerts?:      boolean
+          notify_goal_milestones?:    boolean
+          notify_large_transactions?: boolean
+          large_transaction_threshold?: number
+          notify_weekly_summary?:     boolean
+          notify_monthly_report?:     boolean
+          two_factor_enabled?:        boolean
+          session_timeout_minutes?:   number
         }
       }
 
