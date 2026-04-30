@@ -28,7 +28,7 @@ export function missingSupabaseServiceEnvHint(): string {
     return 'Add SUPABASE_URL on the API server (copy VITE_SUPABASE_URL from client/.env.local if needed).'
   }
   if (!key) {
-    return 'Add SUPABASE_SERVICE_ROLE_KEY to server/.env (Dashboard → Settings → API → service_role). Never expose this in the browser.'
+    return 'Add SUPABASE_SERVICE_ROLE_KEY to server/.env (Dashboard → Project Settings → API → secret/service_role). Never expose this in the browser.'
   }
   return ''
 }
