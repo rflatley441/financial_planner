@@ -1,5 +1,12 @@
 import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid'
 
+function readEnvValue(name: string): string | undefined {
+  const raw = process.env[name]
+  if (!raw) return undefined
+  // Allow `.env` lines like `KEY=value # comment` without breaking auth.
+  return raw.replace(/\s+#.*$/, '').trim() || undefined
+}
+
 function plaidBasePath(): string {
   const env = (process.env.PLAID_ENV ?? 'sandbox').toLowerCase()
   if (env === 'production') return PlaidEnvironments.production
@@ -8,14 +15,14 @@ function plaidBasePath(): string {
 
 export function isPlaidConfigured(): boolean {
   return Boolean(
-    process.env.PLAID_CLIENT_ID?.trim()
-    && process.env.PLAID_SECRET?.trim(),
+    readEnvValue('PLAID_CLIENT_ID')
+    && readEnvValue('PLAID_SECRET'),
   )
 }
 
 export function getPlaidClient(): PlaidApi {
-  const clientId = process.env.PLAID_CLIENT_ID?.trim()
-  const secret = process.env.PLAID_SECRET?.trim()
+  const clientId = readEnvValue('PLAID_CLIENT_ID')
+  const secret = readEnvValue('PLAID_SECRET')
   if (!clientId || !secret) {
     throw new Error('PLAID_CLIENT_ID and PLAID_SECRET must be set')
   }

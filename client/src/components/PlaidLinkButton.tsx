@@ -1,8 +1,55 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { usePlaidLink, type PlaidLinkOnSuccessMetadata } from 'react-plaid-link'
 import { Link2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { readApiErrorMessage } from '../lib/apiFetch'
+
+declare global {
+  interface Window {
+    Plaid?: {
+      create: (config: {
+        token: string
+        onSuccess: (public_token: string, metadata: PlaidLinkOnSuccessMetadata) => void
+        onExit?: () => void
+      }) => { open: () => void; destroy: () => void }
+    }
+  }
+}
+
+type PlaidLinkOnSuccessMetadata = {
+  institution?: {
+    name?: string | null
+  } | null
+}
+
+const PLAID_SCRIPT_SRC = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js'
+const PLAID_SCRIPT_ID = 'plaid-link-initialize'
+
+let plaidScriptPromise: Promise<void> | null = null
+function loadPlaidScriptOnce(): Promise<void> {
+  if (typeof window === 'undefined') return Promise.reject(new Error('Plaid can only load in the browser'))
+  if (window.Plaid?.create) return Promise.resolve()
+
+  if (plaidScriptPromise) return plaidScriptPromise
+
+  plaidScriptPromise = new Promise<void>((resolve, reject) => {
+    const existing = document.getElementById(PLAID_SCRIPT_ID) as HTMLScriptElement | null
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true })
+      existing.addEventListener('error', () => reject(new Error('Failed to load Plaid script')), { once: true })
+      return
+    }
+
+    const script = document.createElement('script')
+    script.id = PLAID_SCRIPT_ID
+    script.src = PLAID_SCRIPT_SRC
+    script.async = true
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error('Failed to load Plaid script'))
+    document.body.appendChild(script)
+  })
+
+  return plaidScriptPromise
+}
 
 async function fetchLinkToken(accessToken: string): Promise<string> {
   const r = await fetch('/api/plaid/create-link-token', {
@@ -47,6 +94,7 @@ export default function PlaidLinkButton({ onConnected }: { onConnected: () => vo
   const [error, setError] = useState<string | null>(null)
   const [setupHint, setSetupHint] = useState<string | null>(null)
   const openedForTokenRef = useRef<string | null>(null)
+  const handlerRef = useRef<{ open: () => void; destroy: () => void } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -92,6 +140,8 @@ export default function PlaidLinkButton({ onConnected }: { onConnected: () => vo
     async (publicToken: string, meta: PlaidLinkOnSuccessMetadata) => {
       if (!accessToken) return
       openedForTokenRef.current = null
+      handlerRef.current?.destroy()
+      handlerRef.current = null
       setBusy(true)
       setError(null)
       try {
@@ -110,31 +160,53 @@ export default function PlaidLinkButton({ onConnected }: { onConnected: () => vo
 
   const onExit = useCallback(() => {
     openedForTokenRef.current = null
+    handlerRef.current?.destroy()
+    handlerRef.current = null
     setLinkToken(null)
     setBusy(false)
   }, [])
 
-  const { open, ready, error: scriptLoadError } = usePlaidLink({
-    token: linkToken,
-    onSuccess,
-    onExit,
-  })
-
   useEffect(() => {
-    if (scriptLoadError) {
-      setError(
-        'Could not load Plaid (cdn.plaid.com). Check your network, firewall, or ad blocker.',
-      )
-    }
-  }, [scriptLoadError])
-
-  useEffect(() => {
-    if (!linkToken || !ready) return
+    if (!linkToken) return
     if (openedForTokenRef.current === linkToken) return
     openedForTokenRef.current = linkToken
-    open()
-    setBusy(false)
-  }, [linkToken, ready, open])
+
+    let cancelled = false
+    setBusy(true)
+    setError(null)
+
+    loadPlaidScriptOnce()
+      .then(() => {
+        if (cancelled) return
+        if (!window.Plaid?.create) throw new Error('Plaid failed to initialize')
+
+        handlerRef.current?.destroy()
+        handlerRef.current = window.Plaid.create({
+          token: linkToken,
+          onSuccess,
+          onExit,
+        })
+        handlerRef.current.open()
+        setBusy(false)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setBusy(false)
+        setLinkToken(null)
+        setError('Could not load Plaid (cdn.plaid.com). Check your network, firewall, or ad blocker.')
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [linkToken, onSuccess, onExit])
+
+  useEffect(() => {
+    return () => {
+      handlerRef.current?.destroy()
+      handlerRef.current = null
+    }
+  }, [])
 
   async function startLink() {
     if (!accessToken) {
@@ -145,6 +217,7 @@ export default function PlaidLinkButton({ onConnected }: { onConnected: () => vo
     setBusy(true)
     openedForTokenRef.current = null
     try {
+      await loadPlaidScriptOnce()
       const token = await fetchLinkToken(accessToken)
       setLinkToken(token)
     } catch (e) {
