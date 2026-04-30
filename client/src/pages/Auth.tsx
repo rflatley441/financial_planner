@@ -1,8 +1,21 @@
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { isSupabaseConfigured } from '../lib/supabase'
 import { TrendingUp, Mail, Lock, User, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
 
 type Mode = 'signin' | 'signup'
+
+function authErrorMessage(raw: string): string {
+  const t = raw.trim().toLowerCase()
+  if (t === 'failed to fetch' || t.includes('networkerror') || raw.includes('Load failed')) {
+    return (
+      'Could not reach Supabase. Check VITE_SUPABASE_URL in client/.env.local (cloud: https://YOUR_REF.supabase.co; ' +
+      'local CLI: http://127.0.0.1:54321), ensure the project is not paused and `supabase start` is running if local, ' +
+      'then restart npm run dev.'
+    )
+  }
+  return raw
+}
 
 export default function Auth() {
   const { signIn, signUp } = useAuth()
@@ -23,14 +36,14 @@ export default function Auth() {
     if (mode === 'signup') {
       const { error } = await signUp(email, password, name)
       if (error) {
-        setError(error.message)
+        setError(authErrorMessage(error.message))
       } else {
         setSuccess('Account created! Check your email to confirm, then sign in.')
         setMode('signin')
       }
     } else {
       const { error } = await signIn(email, password)
-      if (error) setError(error.message)
+      if (error) setError(authErrorMessage(error.message))
     }
     setLoading(false)
   }
@@ -55,6 +68,25 @@ export default function Auth() {
               ? 'Sign in to your Finwise dashboard.'
               : 'Start tracking your full financial picture.'}
           </p>
+
+          {!isSupabaseConfigured && (
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 mb-4">
+              <AlertCircle size={15} className="text-amber-400 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-amber-100/90 space-y-1.5 leading-relaxed">
+                <p className="font-medium text-amber-50">Supabase is not configured</p>
+                <p>
+                  Add <code className="rounded bg-black/25 px-1 py-0.5 text-xs">VITE_SUPABASE_URL</code> and{' '}
+                  <code className="rounded bg-black/25 px-1 py-0.5 text-xs">VITE_SUPABASE_ANON_KEY</code> to{' '}
+                  <code className="rounded bg-black/25 px-1 py-0.5 text-xs">client/.env.local</code> (same folder as the
+                  client&apos;s <code className="rounded bg-black/25 px-1 py-0.5 text-xs">package.json</code> — not the repo
+                  root). Use the <strong>publishable</strong> key (<code className="rounded bg-black/25 px-0.5 text-[11px]">sb_publishable_…</code>) or legacy <strong>anon</strong> JWT (<code className="rounded bg-black/25 px-0.5 text-[11px]">eyJ…</code>) from Supabase → Project Settings → API — not the <strong>secret</strong> key.
+                </p>
+                <p className="text-xs text-amber-200/70">
+                  Remove quotes around values if you added them, then restart <code className="rounded bg-black/25 px-0.5">npm run dev</code>.
+                </p>
+              </div>
+            </div>
+          )}
 
           {error && (
             <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-500/10 border border-red-500/20 mb-4">
@@ -133,7 +165,7 @@ export default function Auth() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !isSupabaseConfigured}
               className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700
                          text-white font-semibold text-sm rounded-xl transition-colors shadow-lg
                          shadow-indigo-500/20 flex items-center justify-center gap-2 disabled:opacity-60

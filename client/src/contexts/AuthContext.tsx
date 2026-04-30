@@ -23,11 +23,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Hydrate from stored session on mount
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-      setUser(data.session?.user ?? null)
-      setLoading(false)
-    })
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setSession(data.session)
+        setUser(data.session?.user ?? null)
+      })
+      .catch(() => {
+        // Bad URL / network — still show the app
+      })
+      .finally(() => setLoading(false))
 
     // Listen for sign-in / sign-out / token refresh
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {

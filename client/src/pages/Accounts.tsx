@@ -4,7 +4,8 @@ import type { Account } from '../types';
 import { formatCurrency, ACCOUNT_TYPE_LABELS } from '../utils/format';
 import AccountCard from '../components/AccountCard';
 import Modal from '../components/Modal';
-import { Plus, Link2, Trash2 } from 'lucide-react';
+import PlaidLinkButton from '../components/PlaidLinkButton';
+import { Plus, Trash2 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid,
 } from 'recharts';
@@ -96,14 +97,9 @@ function AccountForm({
         <label htmlFor="liability" className="text-sm text-slate-600">This is a liability (debt)</label>
       </div>
 
-      {/* Plaid integration placeholder */}
-      <div className="flex items-center gap-2 p-3 rounded-xl bg-indigo-50 border border-indigo-100">
-        <Link2 size={14} className="text-indigo-500 flex-shrink-0" />
-        <p className="text-xs text-indigo-700">
-          <span className="font-semibold">Connect via Plaid</span> — automatic syncing coming soon.
-          {/* TODO: Initialize Plaid Link here with createLinkToken() → exchange public_token */}
-        </p>
-      </div>
+      <p className="text-xs text-slate-500">
+        To link a bank automatically, use <span className="font-medium text-slate-700">Connect bank (Plaid)</span> on the Accounts page header.
+      </p>
 
       <div className="flex items-center gap-2 pt-2">
         <button type="submit" disabled={saving} className="btn-primary flex-1 justify-center">
@@ -167,9 +163,12 @@ export default function Accounts() {
           <h1 className="text-2xl font-bold text-slate-900">Accounts</h1>
           <p className="text-slate-500 text-sm mt-0.5">Manage your linked financial accounts.</p>
         </div>
-        <button onClick={() => setModal('add')} className="btn-primary">
-          <Plus size={16} /> Add Account
-        </button>
+        <div className="flex items-center gap-2">
+          <PlaidLinkButton onConnected={refresh} />
+          <button onClick={() => setModal('add')} className="btn-primary">
+            <Plus size={16} /> Add Account
+          </button>
+        </div>
       </div>
 
       {/* Summary cards */}

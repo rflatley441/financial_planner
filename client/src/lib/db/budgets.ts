@@ -18,7 +18,7 @@ export async function getBudgets(month: number, year: number): Promise<Budget[]>
       .select(`*, categories ( id, name, icon, color )`)
       .eq('month', month)
       .eq('year',  year)
-      .order('categories(name)', { ascending: true }),
+      .order('name', { ascending: true, foreignTable: 'categories' }),
 
     // All expense transactions in the period (amount < 0, excluding transfers)
     supabase

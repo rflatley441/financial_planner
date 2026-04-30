@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getDashboard, getNetWorth } from '../api/client';
+import { useAuth } from '../contexts/AuthContext';
 import type { DashboardData, NetWorthSnapshot } from '../types';
 import { formatCurrency, formatShortDate } from '../utils/format';
 import StatCard from '../components/StatCard';
@@ -42,19 +43,60 @@ function PieLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) 
   );
 }
 
+function loadErrorMessage(err: unknown): string {
+  if (err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string') {
+    return (err as { message: string }).message;
+  }
+  return String(err);
+}
+
 export default function Dashboard() {
+  const { user } = useAuth();
   const [data,     setData]     = useState<DashboardData | null>(null);
   const [history,  setHistory]  = useState<NetWorthSnapshot[]>([]);
   const [loading,  setLoading]  = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const metaName = user?.user_metadata?.name as string | undefined;
+  const firstName =
+    metaName?.trim().split(/\s+/)[0]
+    ?? user?.email?.split('@')[0]
+    ?? 'there';
 
   useEffect(() => {
     Promise.all([getDashboard(), getNetWorth()])
-      .then(([dash, nw]) => { setData(dash); setHistory(nw); })
+      .then(([dash, nw]) => {
+        setData(dash);
+        setHistory(nw);
+        setLoadError(null);
+      })
+      .catch((err) => {
+        console.error('[Dashboard]', err);
+        setLoadError(loadErrorMessage(err));
+      })
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <LoadingSkeleton />;
-  if (!data)   return <div className="p-8 text-red-500">Failed to load dashboard. Is the API server running?</div>;
+  if (!data) {
+    return (
+      <div className="p-8 max-w-xl space-y-3">
+        <p className="text-red-600 font-medium">Couldn’t load dashboard.</p>
+        <p className="text-slate-600 text-sm leading-relaxed">
+          This app talks to <strong className="font-medium text-slate-800">Supabase</strong> from the browser — there is no separate API server to start.
+          Confirm <code className="text-xs bg-slate-100 px-1 py-0.5 rounded">VITE_SUPABASE_URL</code> and{' '}
+          <code className="text-xs bg-slate-100 px-1 py-0.5 rounded">VITE_SUPABASE_ANON_KEY</code> in{' '}
+          <code className="text-xs bg-slate-100 px-1 py-0.5 rounded">client/.env.local</code>, run migrations on your project, then restart{' '}
+          <code className="text-xs bg-slate-100 px-1 py-0.5 rounded">npm run dev</code>.
+          Check the browser Network tab for failed requests to{' '}
+          <code className="text-xs bg-slate-100 px-1 py-0.5 rounded">*.supabase.co</code>.
+        </p>
+        {loadError && (
+          <pre className="text-xs text-slate-700 bg-slate-100 p-3 rounded-xl overflow-x-auto whitespace-pre-wrap">{loadError}</pre>
+        )}
+      </div>
+    );
+  }
 
   const { netWorth, monthlySpending, budgets, recentTransactions, goals, accounts } = data;
 
@@ -74,7 +116,7 @@ export default function Dashboard() {
     <div className="p-8 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Good morning, Alex 👋</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Good morning, {firstName} 👋</h1>
         <p className="text-slate-500 text-sm mt-0.5">Here's your financial snapshot for today.</p>
       </div>
 
