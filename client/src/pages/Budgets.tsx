@@ -16,7 +16,7 @@ function BudgetForm({
   onClose,
 }: {
   categories: Category[];
-  existingIds: number[];
+  existingIds: string[];
   month: number;
   year: number;
   initial?: Budget;
@@ -24,7 +24,7 @@ function BudgetForm({
   onClose: () => void;
 }) {
   const available = categories.filter(c => !c.is_income && !existingIds.includes(c.id));
-  const [catId,  setCatId]  = useState(initial?.category_id ?? available[0]?.id ?? 0);
+  const [catId,  setCatId]  = useState<string>(initial?.category_id ?? available[0]?.id ?? '');
   const [amount, setAmount] = useState(initial?.amount ?? 0);
   const [saving, setSaving] = useState(false);
 
@@ -40,7 +40,7 @@ function BudgetForm({
       {!initial && (
         <div>
           <label className="label">Category</label>
-          <select className="input" value={catId} onChange={e => setCatId(Number(e.target.value))}>
+          <select className="input" value={catId} onChange={e => setCatId(e.target.value)}>
             {available.length === 0
               ? <option disabled>All categories have budgets</option>
               : available.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)

@@ -35,12 +35,12 @@ function AccountForm({
     institution:  initial?.institution ?? '',
     type:         initial?.type ?? 'checking',
     balance:      initial?.balance ?? 0,
-    is_liability: initial?.is_liability ?? 0,
+    is_liability: initial?.is_liability ?? false,
     color:        initial?.color ?? '#4F46E5',
   });
   const [saving, setSaving] = useState(false);
 
-  const set = (k: string, v: string | number) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k: string, v: unknown) => setForm(f => ({ ...f, [k]: v }));
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -68,7 +68,7 @@ function AccountForm({
               const t = e.target.value;
               set('type', t);
               set('color', ACCOUNT_COLORS[t] ?? '#4F46E5');
-              set('is_liability', t === 'credit_card' || t === 'loan' ? 1 : 0);
+              set('is_liability', t === 'credit_card' || t === 'loan');
             }}
           >
             {Object.entries(ACCOUNT_TYPE_LABELS).map(([v, l]) => (
@@ -89,8 +89,8 @@ function AccountForm({
         <input
           type="checkbox"
           id="liability"
-          checked={Boolean(form.is_liability)}
-          onChange={e => set('is_liability', e.target.checked ? 1 : 0)}
+          checked={form.is_liability}
+          onChange={e => set('is_liability', e.target.checked)}
           className="rounded"
         />
         <label htmlFor="liability" className="text-sm text-slate-600">This is a liability (debt)</label>
@@ -142,7 +142,8 @@ export default function Accounts() {
     if (modal && modal !== 'add') {
       await updateAccount((modal as Account).id, data);
     } else {
-      await createAccount(data);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await createAccount(data as any);
     }
     setModal(null);
     refresh();

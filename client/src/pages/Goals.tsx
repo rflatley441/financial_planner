@@ -32,7 +32,7 @@ function GoalForm({
     target_amount:  initial?.target_amount  ?? 0,
     current_amount: initial?.current_amount ?? 0,
     target_date:    initial?.target_date    ?? '',
-    account_id:     initial?.account_id     ?? null as number | null,
+    account_id:     initial?.account_id     ?? null as string | null,
     color:          initial?.color          ?? '#4F46E5',
     notes:          initial?.notes          ?? '',
   });
@@ -85,7 +85,7 @@ function GoalForm({
       </div>
       <div>
         <label className="label">Linked Account (optional)</label>
-        <select className="input" value={form.account_id ?? ''} onChange={e => set('account_id', e.target.value ? Number(e.target.value) : null)}>
+        <select className="input" value={form.account_id ?? ''} onChange={e => set('account_id', e.target.value || null)}>
           <option value="">— None —</option>
           {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
@@ -151,9 +151,11 @@ export default function Goals() {
 
   async function handleSave(data: Partial<Goal>) {
     if (modal && modal !== 'add') {
-      await updateGoal((modal as Goal).id, data);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await updateGoal((modal as Goal).id, data as any);
     } else {
-      await createGoal(data);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await createGoal(data as any);
     }
     setModal(null);
     refresh();

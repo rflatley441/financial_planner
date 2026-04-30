@@ -22,11 +22,11 @@ function TransactionForm({
   onDelete?: () => Promise<void>;
 }) {
   const [form, setForm] = useState({
-    account_id:  initial?.account_id  ?? accounts[0]?.id ?? 1,
+    account_id:  initial?.account_id  ?? accounts[0]?.id ?? '',
     date:        initial?.date        ?? new Date().toISOString().slice(0, 10),
     merchant:    initial?.merchant    ?? '',
     amount:      initial?.amount      ?? 0,
-    category_id: initial?.category_id ?? null as number | null,
+    category_id: initial?.category_id ?? null as string | null,
     notes:       initial?.notes       ?? '',
   });
   const [saving, setSaving] = useState(false);
@@ -59,13 +59,13 @@ function TransactionForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="label">Account</label>
-          <select className="input" value={form.account_id} onChange={e => set('account_id', Number(e.target.value))}>
+          <select className="input" value={form.account_id} onChange={e => set('account_id', e.target.value)}>
             {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
         </div>
         <div>
           <label className="label">Category</label>
-          <select className="input" value={form.category_id ?? ''} onChange={e => set('category_id', e.target.value ? Number(e.target.value) : null)}>
+          <select className="input" value={form.category_id ?? ''} onChange={e => set('category_id', e.target.value || null)}>
             <option value="">— Uncategorized —</option>
             {categories.filter(c => !c.is_income).map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
             <optgroup label="Income">
@@ -97,7 +97,7 @@ export default function Transactions() {
   const [accounts,     setAccounts]     = useState<Account[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [modal,        setModal]        = useState<'add' | Transaction | null>(null);
-  const [editingCat,   setEditingCat]   = useState<number | null>(null);
+  const [editingCat,   setEditingCat]   = useState<string | null>(null);
 
   // Filters
   const [search,      setSearch]      = useState('');
@@ -110,8 +110,8 @@ export default function Transactions() {
   const refresh = useCallback(() => {
     const params: Record<string, unknown> = {};
     if (search)      params.search      = search;
-    if (filterCat)   params.category_id = Number(filterCat);
-    if (filterAcc)   params.account_id  = Number(filterAcc);
+    if (filterCat)   params.category_id = filterCat;
+    if (filterAcc)   params.account_id  = filterAcc;
     if (filterMonth) params.month       = filterMonth;
     if (filterYear)  params.year        = filterYear;
     setLoading(true);
@@ -131,7 +131,8 @@ export default function Transactions() {
     if (modal && modal !== 'add') {
       await updateTransaction((modal as Transaction).id, data);
     } else {
-      await createTransaction(data);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await createTransaction(data as any);
     }
     setModal(null);
     refresh();
@@ -145,8 +146,8 @@ export default function Transactions() {
     }
   }
 
-  async function handleQuickCat(txn: Transaction, catId: number) {
-    await updateTransaction(txn.id, { ...txn, category_id: catId });
+  async function handleQuickCat(txn: Transaction, catId: string) {
+    await updateTransaction(txn.id, { category_id: catId });
     setEditingCat(null);
     refresh();
   }
@@ -287,7 +288,7 @@ export default function Transactions() {
                           autoFocus
                           className="input text-xs py-1 px-2 w-36"
                           defaultValue={t.category_id ?? ''}
-                          onChange={e => handleQuickCat(t, Number(e.target.value))}
+                          onChange={e => handleQuickCat(t, e.target.value)}
                           onBlur={() => setEditingCat(null)}
                         >
                           <option value="">Uncategorized</option>
